@@ -26,11 +26,15 @@ a.  Use str_detect() to identify all energy sources that contain the substring "
 
 ```{r}
 
+str_detect(energy_sources, "Wind|Hydro")
+
 ```
 
 b.  Extract the unit type (e.g., MWh, GWh, kWh) using str_extract(). Make sure your pattern handles extra spaces or hyphens.
 
 ```{r}
+
+str_extract(energy_sources, "\\b[MGK]WH\\b")
 
 ```
 
@@ -38,16 +42,21 @@ c.  Clean the names to keep only the energy source name, trimming whitespace and
 
 ```{r}
 
+str_removal(energy_sources, "\\s*\\(.*\\)")
+
 ```
 
 d.  Create a clean tibble called energy_clean with two columns: source and unit.
 
 ```{r}
 
+energy_clean <- unit = str_extract(energy_sources, "\\b[MGk]Wh\\b")
+
 ```
 
 e.  Discussion: Why might regex cleaning be important before performing joins or aggregations?\
-    \
+    
+    \ Clear out blank space, parenthese, and sort them in clumns so it's easier to access later and join
 
 #### Q2. State Datasets: Joins and Pivots
 
@@ -77,11 +86,15 @@ a.  Perform a left join to combine socioeconomic and regional data.
 
 ```{r}
 
+left_join(regions, by = "state")
+
 ```
 
 b.  Perform an inner join. How many rows remain, and why is it the same or different?
 
 ```{r}
+
+inner <- dim(inner)(regions, by = "state")
 
 ```
 
@@ -90,13 +103,17 @@ c.  Perform an anti join to check if any state names don’t match between datas
 
 ```{r}
 
+anti_join(x = states, y = regions, by "state")
+
 ```
 
 d.  Discussion: Why would you prefer a left join over an inner join when merging state-level datasets?\
-    \
+    \ inner_join is no matching -> excluded and left_join -> not excluded, still kept
 e. Use pivot_longer() to make the socioeconomic data longer.\
 
 ```{r}
+
+pivot_longer(states == ("Income", "Illiteracy", "Population"), names_to = "state", values_to = "value")
 
 ```
 
@@ -121,19 +138,20 @@ sales
 a. Convert the dataset from wide (one column per month) to long (one row per month per store).
 
 ```{r}
-
+sales <- pivot_longer(sales, cols = c("Jan_Sales", "Feb_Sales", "Mar_Sales"), names_to = "Month")
 ```
 
 b. Clean month names by removing _Sales.
 
 ```{r}
-
+sales_long |>
+    mutate(Month = str_remove(Month, "_Sales"))
 ```
 
 c. Convert the long dataset back to wide, with one column per month.
 
 ```{r}
-
+pivot_wider(sales, names_from = "Month")
 ```
 
 #### Q3. Mapping
@@ -170,9 +188,18 @@ ggplot(us_map_joined, aes(long, lat, group = group, fill = Income)) +
   labs(title = "Average Income by State")
 ```
 
-b.  Swap Income for Life Exp to visualize life expectancy instead. Try changing the color scale using scale_fill_gradient() or scale_fill_gradient2()
+b.  Swap Income for Life Exp to visualize life Illiteracy instead. Try changing the color scale using scale_fill_gradient() or scale_fill_gradient2()
 
 ```{r}
+
+ggplot(us_map_joined, aes(long_lat,groupsgroup, fill = "Life Illiteracy"))
+
+scale_fill_gradient(
+  ow = "lightblue",
+  high = "dark blue",
+  ime = "Life Illiteracy"
+
+)
 
 ```
 

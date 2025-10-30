@@ -1,6 +1,8 @@
 ---
 title: "EV Power - Lab 4 Project Report"
-format: typst
+author: Christian Gee
+due date: Oct 29, 2025
+format: pdf
 ---
 
 # Example Solution 1
@@ -9,15 +11,55 @@ format: typst
 
 ```{r}
 
+
+library(tidyverse)
+library(maps)
+library(knitr)
+
+renew_2023 <- read_csv("data/renew-use-2023.csv")
+total_2023 <- read_csv("data/total-use-2023.csv")
+ev_2023 <- read_csv("data/ev-registrations-by-state-2023.csv")
+
 ```
 
 ## **Part 1:** **Defining Research Question**
 
-Chosen Question:
+Chosen Question: "Are EVs in coal-heavy states basically just coal-powered cars?"
+
+**Key Variables:**
+- Renewable energy percentage by state
+- Total engery consumption by state
+- EV registrations by state
+- Relationship between clean energy and EV adoption
 
 ## **Part 2: Data Preparation and Cleaning**
 
 ```{r}
+
+renew_2023 <- renew_2023 |>
+    rename_with(tolower) |>
+    rename_with(~str_replace_all(., " ", "_"))
+
+total_2023 |>
+    rename_with(tolower) |>
+    rename_with(~str_replace_all(., " ", "_"))
+
+ev_2023 |>
+    rename_with(tolower) |>
+    rename_with(~str_replace_all(., " ", "_"))
+
+renew_2023 |>
+    mutate(state = tolower(str_trim(state)))
+
+total_2023 |>
+    mutate(state = tolower(str_trim(state)))
+
+ev_2023 |>
+    mutate(state = tolower(str_trim(state)))
+
+head(renew_2023)
+head(total_2023)
+head(ev_2023)
 
 ```
 
@@ -25,10 +67,133 @@ Chosen Question:
 
 ```{r}
 
+energy_data <- renew_2023 |>  
+    left_join(total_2023, by = "state") |>
+
+mutate(
+    renewable_pct = (renewable_energy / total_energy) * 100,
+
+energy_category = case_when(
+    renewable_pct >= 50 ~ "High Renewable (50%+)"
+    renewable_pct >= 25 ~ "Moderate Renewable (25-50%)",
+    renewable_pct < 25 ~ "Low Renewable (<25%)",
+    TRUE ~ "Unkown"
+),
+
+energy_category = factor(energy_category, 
+                            levels = c("High Renewable (50%+)", 
+                                     "Moderate Renewable (25-50%)", 
+                                     "Low Renewable (<25%)"))
+) |>
+
+drop_na(renewable_pct, ev_registrations)
+
+head(energy_data)
+
+summary_stats |>
+    group_by(energy_caterory) |>
+    summarize(
+        n_states = n(),
+        avg_renewable_pct = mean(renewable_pct, na.rm = TRUE),
+        total_evs = sum(ev_registrations, na.rm = TRUE),
+        avg_evs_per_state = mean(ev_registrations, na.rm = TRUE)
+    )
+
+kable(summary_stats,
+    caption = "EV Adoption by State Energy Profile" 
+    digits = 1)
 ```
 
 ## **Part 4: Mapping Visualization**
 
 ```{r}
 
+### Map 1: Renewable Energy Percentage by State
+us_map |>
+    left_join(energy_data, by = c("region" = "state"))
+    
+ggplot(map_data, aes(x = long, y = lat, group = group)) +
+    geom_polygon(aes(fill = renewable_pct), color = "white", size = 0.3) +
+    coord_fixed(1.3) +
+    scale_fill_gradient2(
+        low = "red",
+        mid = "yellow",
+        high = "green",
+        midpoint = 40,
+        name = "Renewable/nEnergy %",
+        na.value = "grey80"
+    ) +
+    theme_void() +
+        theme(
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, hjust 0.5),
+        legend.position = "right"
+        )
+
+### Graph 2: Relationship Between Clean Energy and EV Adoption
+
+ggplot(energy_data, aes(x = renewable_pct, y ev_registrations)) + 
+    geom_point(aes(color = energy category), size = 3, alpha = 0.7) +
+    geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed") +
+    scale_color_manual(
+        values = c("High Renwable (50%+)" = "green",
+               "Moderate Renewable (25-50%)" = "yellow", 
+               "Low Renewable (<25%)" = "red"),
+    name = "Energy Profile"
+    ) +
+    scale_y_continuous(labels = scales:: comma) +
+    labs(
+        title = "Do Clean Energy States Have more EVs?",
+        x = "renewable Energy (%)",
+        y = "EV Registrations (2023)",
+        caption = "Each point represents a state"
+    ) +
+    theme_minimal()
+    them(
+        plot.title = elment_text(size = 14, face = "bold"),
+        legend.position = "bottom"
+    )
+
+### Top 10 States by Renewable Energy
+
+energy_data |>
+    arrange(desc(renewable_pct)) |>
+    head(10) |>
+    ggplot(aes(x = reorder(state, renewable_pct), y = renewable_pct)) + 
+    geom_col(fill = "1a9850") +
+    coord_flip() +
+    labs(
+        title = "Top 10 States by Renewable Energy Percentage",
+        x = NULL,
+        y = "Renewable Energy (%)
+    ) +
+    theme_minimal()
+
 ```
+
+
+### ANALYSIS AND FINDINGS
+
+1. **Geographic Divide**: The map clearly shows a regional pattern:
+- West Coast States: Have high renewable percentages
+- Mountain West: Also show strong renwable usage
+- Midwest and Southeast: Rely heavliy on fossil fuels 
+- Northeast: Shows mixed results 
+
+2. **EV Concentration**: The scatterplot reveals that most EV registrations occur in states with moderate to high renewable energy:
+- California leads with both high renewable energy AND high EV adoption
+- States with low renewable energy tend to have fewer EVs 
+
+3. **The Coal-Powered EV Problem**:
+States with low renewable energy percentages have EVs that are essentially powered by fossil fuels. In these states, the environmental benefit of EVs is significantly reduced
+
+### Answer to Research Question
+Yes, many EVs in coal-heavy states are essentially coal-powered cars. However, there's a silver lining that most EVs are concentrated in states that have invested in renewable energy. 
+The data shows that high renewable states have the most EVs, meaning that these vehicles provide genuine environmental benefits. On the other hand low renewable energy have fewer EVs,
+but those that do exist are largely powered by fossil fuels. 
+
+##Conclusion
+
+Electric vehicles are only as clean as the electrcity that powers them. This analysis reveals a geographic divide: EVs in renewable-rich states are genuinely clean transportation, 
+while EVs in fossil fuel-dependent states provide limited environmental benefit. In the future there needs to be an investment in both EV infrastructure and renewable energy generation.
+

@@ -2,6 +2,7 @@
 title: Clean Energy and Electric Vehicles
 title-prefix: Project 4
 format: stat133handout-typst
+name: Christian Gee
 ---
 
 ### **Main Research Question**
